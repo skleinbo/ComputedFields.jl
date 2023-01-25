@@ -3,6 +3,9 @@ uuid = "ca9a45ee-5845-4167-bbbe-6c434770cc9d"
 authors = ["Stephan Kleinbölting <s.kleinboelting@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+
 [compat]
 julia = "1.6"
 
