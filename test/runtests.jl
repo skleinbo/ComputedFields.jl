@@ -1,4 +1,5 @@
 using ComputedFields
+import LinearAlgebra
 using Test
 
 @computed mutable struct SinCos
@@ -37,4 +38,16 @@ end
     @test p.x ≈ p.y ≈ 1/sqrt(2)
     @test p.one ≈ 2.0
 end
+
+@computed mutable struct VectorAndNorm{T}
+    v::Vector{T}
+    norm::T = LinearAlgebra.norm(v)
+end
+@testset "Parametric" begin
+    vec_and_norm = VectorAndNorm([1.0,2.0,3.0])
+    @test vec_and_norm.norm ≈ sqrt(1+4+9)
+    vec_and_norm.v = [1f0,2f0]
+    @test eltype(vec_and_norm.v) == Float64
+end
+
 
