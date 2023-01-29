@@ -57,5 +57,27 @@ julia> vec_and_norm.norm
 
 ## (Current) Limitations
 
+* Only mutable structs are supported for now.
+* It's the user's responsibility to make sure no circular dependencies amongst fields are introduced.
+* Computations are triggered by mutating fields. Thus, e.g.
+  
+  ```julia
+  @computed mutable struct VectorMax
+    v::Vector{Float64}
+    max::Float64 = maximum(v)
+  end
+
+  vm = VectorMax([1.0,2.0,3.0])
+  # vm.max == 3.0
+  vm.v[1] = 10.0
+  # vm.max is _not_ 10.0 now
+  # call calculateproperty!(vm, :max) explicitely instead.
+  ```
+
+  does not work.
 * Computed fields must be explicitly type annotated, or they default to `Any`.
 * Because an inner constructor is automatically defined, you cannot provide your own.
+
+## Todo:
+
+* Support immutable struct: setting an independent field returns a new instance.
