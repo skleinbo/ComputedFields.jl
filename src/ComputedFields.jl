@@ -92,8 +92,8 @@ function define_setproperty_dep(T, var::Symbol, type, dep_vars)
     end
     ord = order(dep_vars, var)
     func = quote
-        function setproperty!(x::$T, ::$field, v)
-            Base.setfield!(x, $(Meta.quot(var)), convert($type, v))
+        function setproperty!(x::$T, ::Val{$(Meta.quot(var))}, v)
+            Base.setfield!(x, $(Meta.quot(var)), convert(fieldtype(typeof(x), $(Meta.quot(var))), v))
         end 
     end
     func_body = func.args[end].args[end].args
