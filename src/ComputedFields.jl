@@ -114,6 +114,12 @@ function define_calculateproperty(T, var::Symbol, expr, all_vars::Vector{Symbol}
     )
 end
 
+strip(ex::Symbol) = ex
+function strip(ex::Expr)
+    ex.head === :(<:) && return ex.args[1]
+    throw(ArgumentError("$ex is neither a symbol nor <:"))
+end 
+
 """
     @computed mutable struct [...] end
 
