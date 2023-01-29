@@ -84,18 +84,18 @@ function define_setproperty_dep(T, var::Symbol, type, dep_vars)
     field = Val{var}
     if var in keys(dep_vars)
         msg = "cannot set calculated field $var"
-        return :(
+        return quote
             function setproperty!(::$T, ::$field, v)
                 throw(ErrorException($msg))
             end
-        )
+        end
     end
     ord = order(dep_vars, var)
-    func = :(
+    func = quote
         function setproperty!(x::$T, ::$field, v)
             Base.setfield!(x, $(Meta.quot(var)), convert($type, v))
         end 
-    )
+    end
     func_body = func.args[end].args[end].args
     for var in ord[begin+1:end]
         push!(func_body, :( calculateproperty!(x, $(Meta.quot(var))) ) )
