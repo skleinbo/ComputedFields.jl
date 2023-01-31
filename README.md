@@ -71,13 +71,15 @@ julia> vec_and_norm.norm
   # vm.max == 3.0
   vm.v[1] = 10.0
   # vm.max is _not_ 10.0 now
-  # call computeproperty!(vm, :max) explicitely instead.
+  # call computeproperty!(vm, :max) explicitly instead.
   ```
 
   does not work.
+* Updating multiple independent fields simultaneously is not (yet) supported.
 * Computed fields must be explicitly type annotated, or they default to `Any`.
 * Because an inner constructor is automatically defined, you cannot provide your own.
 
-## Todo:
+## Todo
 
-* Support immutable struct: setting an independent field returns a new instance.
+* [ ] Support immutable struct: setting an independent field returns a new instance.
+* [ ] Multi-update
