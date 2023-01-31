@@ -98,17 +98,17 @@ function define_setproperty_dep(T, var::Symbol, type, dep_vars)
     end
     func_body = func.args[end].args[end].args
     for var in ord[begin+1:end]
-        push!(func_body, :( calculateproperty!(x, $(Meta.quot(var))) ) )
+        push!(func_body, :( computeproperty!(x, $(Meta.quot(var))) ) )
     end
     push!(func_body, :(return v))
     return func
 end
 
-function define_calculateproperty(T, var::Symbol, expr, all_vars::Vector{Symbol})
+function define_computeproperty!(T, var::Symbol, expr, all_vars::Vector{Symbol})
     field = Val{var}
     expr = postwalk(u->u isa Symbol && u in all_vars ? :(x.$u) : u, expr)
     return :(
-        @inline function calculateproperty!(x::$T, ::$field)
+        @inline function computeproperty!(x::$T, ::$field)
             Base.setfield!(x, $(Meta.quot(var)), $expr)
         end
     )
@@ -191,7 +191,7 @@ macro computed(ex)
 
     for var in dep_vars
         return_expr = :($return_expr;
-        $(define_calculateproperty(thetype, var.first, var.second[end], all_vars))
+        $(define_computeproperty!(thetype, var.first, var.second[end], all_vars))
         )
     end
     for var in [indep_vars; dep_vars]
@@ -201,7 +201,7 @@ macro computed(ex)
     end
 
     return_expr = :($return_expr;
-        calculateproperty!(x::$thetype, field::Symbol) = calculateproperty!(x, Val(field));
+        computeproperty!(x::$thetype, field::Symbol) = computeproperty!(x, Val(field));
         setproperty!(x::$thetype, field::Symbol, v) = setproperty!(x, Val(field), v);
         nothing
     )

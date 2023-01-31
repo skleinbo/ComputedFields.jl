@@ -71,7 +71,7 @@ julia> vec_and_norm.norm
   # vm.max == 3.0
   vm.v[1] = 10.0
   # vm.max is _not_ 10.0 now
-  # call calculateproperty!(vm, :max) explicitely instead.
+  # call computeproperty!(vm, :max) explicitely instead.
   ```
 
   does not work.

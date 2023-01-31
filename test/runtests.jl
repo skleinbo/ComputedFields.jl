@@ -8,7 +8,7 @@ using Test
 end
 @testset "SinCos" begin
     @test Base.hasmethod(setproperty!, Tuple{SinCos, Val{:x}, <:Any})
-    @test Base.hasmethod(calculateproperty!, Tuple{SinCos, Val{:thesincos}})
+    @test Base.hasmethod(computeproperty!, Tuple{SinCos, Val{:thesincos}})
 
     ms = SinCos(π/2)
     @test ms.x == π/2
@@ -28,9 +28,9 @@ end
 @testset "Polar" begin
     @test Base.hasmethod(setproperty!, Tuple{Polar, Val{:r}, <:Any})
     @test Base.hasmethod(setproperty!, Tuple{Polar, Val{:phi}, <:Any})
-    @test Base.hasmethod(calculateproperty!, Tuple{Polar, Val{:x}})
-    @test Base.hasmethod(calculateproperty!, Tuple{Polar, Val{:y}})
-    @test Base.hasmethod(calculateproperty!, Tuple{Polar, Val{:one}})
+    @test Base.hasmethod(computeproperty!, Tuple{Polar, Val{:x}})
+    @test Base.hasmethod(computeproperty!, Tuple{Polar, Val{:y}})
+    @test Base.hasmethod(computeproperty!, Tuple{Polar, Val{:one}})
 
     p = Polar(1.0, 0.0)
     @test p.one ≈ 2.0
