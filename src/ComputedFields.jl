@@ -1,19 +1,17 @@
 module ComputedFields
 
-# Write your package code here.
-import Base: in, getindex, show
 import Base.Cartesian: @nexprs
 import MacroTools: @capture, prewalk, postwalk
 
 export @computed
 
-function order(dep_vars::Dict{Symbol,<:Any}, var::Symbol)
-    order = Symbol[var]
+order(dep_vars::Dict{Symbol}, var::Symbol) = order(dep_vars, Symbol[var])
+function order(dep_vars::Dict{Symbol}, vars)
+    order = copy(vars)
     dep_vars = deepcopy(dep_vars)
     done = false
     while !done
         nextvar = findfirst(dep_vars) do val
-            # key, val = x.first, x.second
             deps = val[1]
             ddeps = deps ∩ order
             !isempty(ddeps) && all(setdiff(deps, order)) do other
@@ -80,7 +78,7 @@ end
 
 bare_struct_def(ex) = Expr(ex.head, ex.args[1:2]..., Expr(:block))
 
-function define_setproperty_dep(T, var::Symbol, type, dep_vars)
+function define_setproperty(T, var::Symbol, type, dep_vars)
     field = Val{var}
     if var in keys(dep_vars)
         msg = "cannot set calculated field $var"
@@ -98,18 +96,23 @@ function define_setproperty_dep(T, var::Symbol, type, dep_vars)
     end
     func_body = func.args[end].args[end].args
     for var in ord[begin+1:end]
-        push!(func_body, :( computeproperty!(x, $(Meta.quot(var))) ) )
+        push!(func_body, :( computeproperty!(x, $(Meta.quot(var)); propagate=false) ) )
     end
     push!(func_body, :(return v))
     return func
 end
 
-function define_computeproperty!(T, var::Symbol, expr, all_vars::Vector{Symbol})
+function define_computeproperty(T, var::Symbol, expr, dep_vars, all_vars::Vector{Symbol})
     field = Val{var}
     expr = postwalk(u->u isa Symbol && u in all_vars ? :(x.$u) : u, expr)
+    ord = order(dep_vars, var)[2:end]
     return :(
-        @inline function computeproperty!(x::$T, ::$field)
-            Base.setfield!(x, $(Meta.quot(var)), $expr)
+        @inline function computeproperty!(x::$T, ::$field; propagate=false)
+            v = Base.setfield!(x, $(Meta.quot(var)), $expr)
+            if propagate
+                Base.Cartesian.@nexprs $(length(ord)) i -> computeproperty!(x, Val($(Meta.quot.(ord))[i]); propagate=false)
+            end
+            return v
         end
     )
 end
@@ -120,36 +123,7 @@ function strip(ex::Expr)
     throw(ArgumentError("$ex is neither a symbol nor <:"))
 end 
 
-"""
-    @computed mutable struct [...] end
-
-Automatically recompute fields. 
-
-Fields can be assigned an expression with `=` that is reevaluated when
-one of the variables in that expression is set.
-
-# Example
-
-```jldocs
-julia> @computed mutable struct SinCos
-    x::Float64
-    thesincos::Tuple{Float64,Float64} = sincos(x)
-end
-
-julia> sc = SinCos(0.0)
-SinCos(0.0, (0.0, 1.0))
-
-julia> sc.x = pi/2
-1.5707963267948966
-
-julia> sc.thesincos
-(1.0, 6.123233995736766e-17)
-```
-"""
-macro computed(ex)
-    if !ex.args[1]
-        throw(ErrorException("struct must be mutable"))
-    end
+function _computed_mutable(ex)
     if !@capture(ex, mutable struct thetype_{thetypeparams__} __ end)
         @debug "Non-parametric type"
         @capture(ex, mutable struct thetype_ __ end)
@@ -191,22 +165,58 @@ macro computed(ex)
 
     for var in dep_vars
         return_expr = :($return_expr;
-        $(define_computeproperty!(thetype, var.first, var.second[end], all_vars))
+        $(define_computeproperty(thetype, var.first, var.second[end], dep_vars_dict, all_vars))
         )
     end
     for var in [indep_vars; dep_vars]
         return_expr = :($return_expr;
-        $(define_setproperty_dep(thetype, var.first, var.second[2], dep_vars_dict))
+        $(define_setproperty(thetype, var.first, var.second[2], dep_vars_dict))
         )
     end
 
     return_expr = :($return_expr;
-        computeproperty!(x::$thetype, field::Symbol) = computeproperty!(x, Val(field));
+        computeproperty!(x::$thetype, field::Symbol; propagate=true) = computeproperty!(x, Val(field); propagate);
         setproperty!(x::$thetype, field::Symbol, v) = setproperty!(x, Val(field), v);
         nothing
     )
        
     return esc(return_expr)
+end
+
+function _computed_immutable(ex)
+end
+
+"""
+    @computed mutable struct [...] end
+
+Automatically recompute fields. 
+
+Fields can be assigned an expression with `=` that is reevaluated when
+one of the variables in that expression is set.
+
+# Example
+
+```jldocs
+julia> @computed mutable struct SinCos
+    x::Float64
+    thesincos::Tuple{Float64,Float64} = sincos(x)
+end
+
+julia> sc = SinCos(0.0)
+SinCos(0.0, (0.0, 1.0))
+
+julia> sc.x = pi/2
+1.5707963267948966
+
+julia> sc.thesincos
+(1.0, 6.123233995736766e-17)
+```
+"""
+macro computed(ex)
+    if !ex.args[1]
+        throw(ErrorException("struct must be mutable"))
+    end
+    return _computed_mutable(ex)
 end
 
 end

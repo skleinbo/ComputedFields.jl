@@ -14,7 +14,7 @@ The macro defines
 
 * The struct with types as annotated.
 * A constructor `TheType(indep_vars...)`
-* A method `computefield!(::TheType, dep_var::Symbol)` that recomputes the field `dep_var`, __but does not propagate__.
+* A method `computefield!(::TheType, dep_var::Symbol)` that recomputes the field `dep_var`. The computation propagates and triggers re-computations downstream in the computational graph by default. Set `propagate=false` if it should not.
 * A method `setproperty!(::TheType, indep_var::Symbol, value)` that sets `field` to `value` and triggers computation of dependent variables.
 
 ### Examples
@@ -79,7 +79,8 @@ julia> vec_and_norm.norm
 * Computed fields must be explicitly type annotated, or they default to `Any`.
 * Because an inner constructor is automatically defined, you cannot provide your own.
 
-## Todo
+## To-do
 
 * [ ] Support immutable struct: setting an independent field returns a new instance.
 * [ ] Multi-update
+* [x] Propagating re-computation of dependent fields.

@@ -50,4 +50,24 @@ end
     @test eltype(vec_and_norm.v) == Float64
 end
 
+## Propagation ##
+@computed mutable struct SomeRandoms
+    lo::Float64
+    hi::Float64
+    x::Float64 = lo + (hi-lo)*rand()
+    y = rand() + x
+    z = y^2
+end
+@testset "Propagation" begin
+    sr = SomeRandoms(1.0, 2.0)
+    old_x, old_y, old_z = sr.x, sr.y, sr.z
+    computeproperty!(sr, :x; propagate=false)
+    @test old_x != sr.x && old_y == sr.y && old_z == sr.z
+    old_x = sr.x
+    computeproperty!(sr, :y; propagate=true)
+    @test old_x == sr.x && sr.y != old_y && sr.z != old_z
+end
+
+
+
 
