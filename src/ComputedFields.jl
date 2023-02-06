@@ -185,6 +185,45 @@ function _computed_mutable(ex)
 end
 
 function _computed_immutable(ex)
+    if !@capture(ex, struct thetype_{thetypeparams__} __ end)
+        @debug "Non-parametric type"
+        @capture(ex, struct thetype_ __ end)
+        thetypeparams = Any[]
+    end
+    @debug thetype, thetypeparams
+    struct_def = bare_struct_def(ex)
+    ex_body = ex.args[3]
+    indep_vars = extract_independent_vars(ex_body)
+    dep_vars = extract_dependent_vars(ex_body)
+    dep_vars_dict = Dict(dep_vars)
+
+    struct_def_body = struct_def.args[3].args
+    for var in [indep_vars; dep_vars]
+        push!(struct_def_body, Expr(:(::), var.first, var.second[2]))
+    end
+    
+    # Create an incomplete constructor to initialise the independent variables.
+    indep_vars_typed = map(indep_vars) do (var, (_,type,_))
+        :( $var :: $((type)))
+    end
+    @debug indep_vars
+    @debug "indep_vars_typed" indep_vars_typed
+    dep_ordered = order(dep_vars_dict, first.(dep_vars))
+    dep_var_expr = collect(dep_vars_dict[k][end] for k in dep_ordered)
+    new_stub = isempty(thetypeparams) ? :(new) : :(new{$(strip.(thetypeparams)...)})
+    inner_constructor = :(
+         function $thetype($(indep_vars_typed...)) where {$(thetypeparams...)}
+            Base.Cartesian.@nexprs $(length(dep_ordered)) i -> $dep_ordered[i] = $dep_var_expr[i]
+            return $new_stub($(first.(indep_vars)...), $(first.(dep_vars)...))
+         end
+    )
+    push!(struct_def_body, inner_constructor)
+  
+    @debug thetype, thetypeparams, struct_def, dep_vars, all_vars
+
+    # imports and struct definition
+    return_expr = :(import Base: setproperty!; $struct_def)
+    return esc(return_expr) 
 end
 
 """
@@ -215,7 +254,7 @@ julia> sc.thesincos
 """
 macro computed(ex)
     if !ex.args[1]
-        throw(ErrorException("struct must be mutable"))
+        return _computed_immutable(ex)
     end
     return _computed_mutable(ex)
 end

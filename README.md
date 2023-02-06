@@ -8,25 +8,35 @@ This package exports the macro
 
 ## `@computed`
 
-Annotating a mutable struct definition with `@computed` facilitates the definition of computed fields (_dependent variables_), which are automatically recomputed when the corresponding _independent variables (fields)_ are updated. Care is taken to ensure the correct order of computations.
+Annotating a (mutable) struct definition with `@computed` facilitates the definition of fields (_dependent variables_), which are automatically computed when an instance is created. If the struct is declared as `mutable`, the corresponding dependent fields are re-computed whenever an _independent variable (field)_ is updated. Care is taken to ensure the correct order of computations.
 
 The macro defines
 
-* The struct with types as annotated.
+* The struct (e.g. `TheType`) with field types as annotated.
 * A constructor `TheType(indep_vars...)`
-* A method `computefield!(::TheType, dep_var::Symbol)` that recomputes the field `dep_var`. The computation propagates and triggers re-computations downstream in the computational graph by default. Set `propagate=false` if it should not.
-* A method `setproperty!(::TheType, indep_var::Symbol, value)` that sets `field` to `value` and triggers computation of dependent variables.
+* __(`mutable` only)__ A method `computeproperty!(::TheType, dep_var::Symbol)` that recomputes the field `dep_var`. The computation propagates and triggers re-computations downstream in the computational graph by default. Set `propagate=false` if it should not.
+* __(`mutable` only)__ A method `setproperty!(::TheType, indep_var::Symbol, value)` that sets `field` to `value` and triggers computation of dependent variables.
 
 ### Examples
 
 ```julia
-julia> @computed mutable struct SinCos
+julia> @computed struct SinCos
     x::Float64
     thesincos::Tuple{Float64,Float64} = sincos(x)
 end
 
-julia> sc = SinCos(0.0)
-SinCos(0.0, (0.0, 1.0))
+julia> sc = SinCos(pi/2)
+SinCos(1.5707963267948966, (1.0, 6.123233995736766e-17))
+
+## Mutable
+
+julia> @computed mutable struct MSinCos
+    x::Float64
+    thesincos::Tuple{Float64,Float64} = sincos(x)
+end
+
+julia> sc = MSinCos(0.0)
+MSinCos(0.0, (0.0, 1.0))
 
 julia> sc.x = pi/2
 1.5707963267948966
@@ -57,9 +67,9 @@ julia> vec_and_norm.norm
 
 ## (Current) Limitations
 
-* Only mutable structs are supported for now.
 * It's the user's responsibility to make sure no circular dependencies amongst fields are introduced.
-* Computations are triggered by mutating fields. Thus, e.g.
+* Computed fields must be explicitly type annotated, or they default to `Any`.
+* Re-computations are triggered by mutating fields. Thus, e.g.
   
   ```julia
   @computed mutable struct VectorMax
@@ -76,7 +86,6 @@ julia> vec_and_norm.norm
 
   does not work.
 * Updating multiple independent fields simultaneously is not (yet) supported.
-* Computed fields must be explicitly type annotated, or they default to `Any`.
 * Because an inner constructor is automatically defined, you cannot provide your own.
 
 ## To-do
