@@ -21,7 +21,7 @@ function order(dep_vars::Dict{Symbol}, vars)
         if isnothing(nextvar)
             done = true
         else
-            push!(order, nextvar)
+            !(nextvar in order) && push!(order, nextvar)
             delete!(dep_vars, nextvar)
         end
     end
@@ -147,12 +147,13 @@ function _computed_mutable(ex)
         :( $var :: $((type)))
     end
     @debug indep_vars
-    @debug "indep_vars_typed" indep_vars_typed     
+    @debug "indep_vars_typed" indep_vars_typed
+    dep_ordered = order(dep_vars_dict, first.(dep_vars))
     new_stub = isempty(thetypeparams) ? :(new($(first.(indep_vars)...))) : :(new{$(strip.(thetypeparams)...)}($(first.(indep_vars)...)))
     inner_constructor = :(
          function $thetype($(indep_vars_typed...)) where {$(thetypeparams...)}
             obj = $new_stub
-            Base.Cartesian.@nexprs $(length(indep_vars)) i -> setproperty!(obj, $(Meta.quot.(first.(indep_vars)))[i], $(first.(indep_vars))[i])
+            Base.Cartesian.@nexprs $(length(dep_ordered)) i -> computeproperty!(obj, Val($(Meta.quot.(dep_ordered))[i]))
             return obj
          end
     )
