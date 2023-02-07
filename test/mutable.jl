@@ -64,4 +64,18 @@
         computeproperty!(sr, :y; propagate=true)
         @test old_x == sr.x && sr.y != old_y && sr.z != old_z
     end
+
+    @testset "@." begin
+        @eval @computed mutable struct MVectorExpSum{T}
+            v::Vector{T}
+            w::Vector{T} = @. exp(v)
+            sum::T = Base.sum(v; init=5.0)
+        end
+        vec_exp_sum = MVectorExpSum([1.0, 2.0, 3.0])
+        @test vec_exp_sum.sum ≈ 6.0 + 5.0
+        vec_exp_sum.v = [0.0f0, 0.0f0]
+        @test vec_exp_sum.w ≈ [1.0, 1.0]
+        @test vec_exp_sum.sum ≈ 5.0
+    end
+
 end

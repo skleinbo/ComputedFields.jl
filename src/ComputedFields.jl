@@ -46,7 +46,7 @@ function extract_dependent_vars(expr::Expr)
         (!hasproperty(ex, :head) || !(ex.head === :(=))) && continue
         var = extract_var_and_type(ex.args[1])
         call_expr = ex.args[2]
-        if !(call_expr isa Expr) || !(call_expr.head === :call)
+        if !(call_expr isa Expr) || !(call_expr.head === :call) && !(call_expr.head === :macrocall)
             throw(ErrorException("malformed expression $(call_expr)"))
         end
         deps = find_variables(call_expr)
@@ -66,7 +66,12 @@ end
 
 function find_variables(expr::Expr)
     vars = Symbol[]
-    for ex in expr.args[begin+1:end] # args[1]==call
+    if expr.head === :(tuple) || expr.head === :(parameters) || expr.head === :(...)
+        fi = firstindex(expr.args)
+    else
+        fi = firstindex(expr.args) + 1
+    end
+    for ex in expr.args[fi:end] # args[1]==call
         if ex isa Symbol
             push!(vars, ex)
         elseif ex isa Expr
